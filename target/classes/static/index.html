@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <title>Coffee Shop</title>
+
+    <style>
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f1eb;
+            margin: 0;
+            padding: 30px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: auto;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        .customer {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+
+        input {
+            padding: 10px;
+            width: 250px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+        }
+
+        .products {
+            display: grid;
+            grid-template-columns:
+                repeat(auto-fit, minmax(200px, 1fr));
+
+            gap: 20px;
+        }
+
+        .product {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .product h3 {
+            margin-bottom: 10px;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            background: #333;
+            color: white;
+        }
+
+        button:hover {
+            opacity: 0.8;
+        }
+
+        .cart {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 30px;
+        }
+
+        .cart-item {
+            padding: 10px 0;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .total {
+            font-size: 22px;
+            font-weight: bold;
+            text-align: right;
+            margin-top: 20px;
+        }
+
+        .order-button {
+            margin-top: 20px;
+            width: 100%;
+            font-size: 18px;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>☕ Coffee Shop</h1>
+
+    <div class="customer">
+
+        <h2>Customer</h2>
+
+        <input
+            type="text"
+            id="customerName"
+            placeholder="Enter your name"
+        >
+
+    </div>
+
+    <h2>Products</h2>
+
+    <div
+        class="products"
+        id="products">
+    </div>
+
+    <div class="cart">
+
+        <h2>🛒 Your Order</h2>
+
+        <div id="cart"></div>
+
+        <div class="total">
+
+            Total:
+            <span id="total">0</span>
+            Baht
+
+        </div>
+
+        <button
+            class="order-button"
+            onclick="placeOrder()">
+
+            Place Order
+
+        </button>
+
+    </div>
+
+</div>
+
+
+<script>
+
+let products = [];
+
+let cart = [];
+
+
+async function loadProducts() {
+
+    const response =
+        await fetch("/api/products");
+
+    products =
+        await response.json();
+
+    displayProducts();
+}
+
+
+function displayProducts() {
+
+    const container =
+        document.getElementById("products");
+
+    container.innerHTML = "";
+
+
+    products.forEach(product => {
+
+        container.innerHTML += `
+
+            <div class="product">
+
+                <h3>${product.name}</h3>
+
+                <p>
+                    ${product.price} Baht
+                </p>
+
+                <button
+                    onclick="addToCart(${product.id})">
+
+                    Add to Cart
+
+                </button>
+
+            </div>
+
+        `;
+
+    });
+}
+
+
+function addToCart(productId) {
+
+    const product =
+        products.find(
+            p => p.id === productId
+        );
+
+    const existing =
+        cart.find(
+            item => item.productId === productId
+        );
+
+
+    if (existing) {
+
+        existing.quantity++;
+
+    } else {
+
+        cart.push({
+
+            productId: productId,
+
+            name: product.name,
+
+            price: product.price,
+
+            quantity: 1
+
+        });
+
+    }
+
+
+    displayCart();
+}
+
+
+function displayCart() {
+
+    const cartElement =
+        document.getElementById("cart");
+
+    cartElement.innerHTML = "";
+
+
+    let total = 0;
+
+
+    cart.forEach(item => {
+
+        const itemTotal =
+            item.price * item.quantity;
+
+        total += itemTotal;
+
+
+        cartElement.innerHTML += `
+
+            <div class="cart-item">
+
+                ${item.name}
+
+                x ${item.quantity}
+
+                = ${itemTotal} Baht
+
+            </div>
+
+        `;
+
+    });
+
+
+    document.getElementById("total")
+        .innerText = total;
+}
+
+
+async function placeOrder() {
+
+    const customerName =
+        document.getElementById(
+            "customerName"
+        ).value;
+
+
+    if (!customerName) {
+
+        alert("Please enter your name.");
+
+        return;
+    }
+
+
+    if (cart.length === 0) {
+
+        alert("Please add a product.");
+
+        return;
+    }
+
+
+    const orderData = {
+
+        customerName: customerName,
+
+        items: cart.map(item => ({
+
+            productId: item.productId,
+
+            quantity: item.quantity
+
+        }))
+
+    };
+
+
+    const response = await fetch(
+        "/api/order",
+        {
+
+            method: "POST",
+
+            headers: {
+                "Content-Type":
+                    "application/json"
+            },
+
+            body: JSON.stringify(orderData)
+
+        }
+    );
+
+
+    const order =
+        await response.json();
+
+
+    alert(
+        "Order completed!\n\n" +
+        "Customer: " +
+        order.customerName +
+        "\nTotal: " +
+        order.total +
+        " Baht"
+    );
+
+
+    cart = [];
+
+    displayCart();
+
+}
+
+
+loadProducts();
+
+</script>
+
+</body>
+
+</html>
